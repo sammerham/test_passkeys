@@ -9,8 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "@simplewebauthn/browser": "^10.0.0",
+    "@simplewebauthn/server": "^10.0.1",
+    "axios": "^1.7.7",
+    "cookies-next": "^4.2.1",
+    "next": "14.2.14",
     "react": "^18",
-    "react-dom": "^18",
-    "next": "14.2.14"
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "prisma": "^5.20.0"
   }
 }
