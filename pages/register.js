@@ -10,7 +10,7 @@ export default function Register() {
   const handleSignup = async () => {
     try {
       // Step 1: Fetch registration options from the server using Axios
-      const res = await axios.get(`/api/init-register?email=${email}`);
+      const res = await axios.get(`/api/register?email=${email}`);
       const options = res.data;
 
       // Step 2: Use WebAuthn API to create credentials

@@ -11,7 +11,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       // Step 1: Fetch authentication options from the server using Axios
-      const res = await axios.get(`/api/init-auth?email=${email}`);
+      const res = await axios.get(`/api/auth?email=${email}`);
       const options = res.data;
 
       // Step 2: Use WebAuthn API to authenticate
