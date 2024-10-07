@@ -94,6 +94,7 @@ Prisma Schema
 Here is an example of the Prisma schema used in this project:
 
 11 - **prisma**
+
 model User {
   id       String    @id @default(cuid())
   email    String    @unique
