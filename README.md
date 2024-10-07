@@ -46,33 +46,27 @@ DATABASE_URL=postgresql://USERNAME:PASSWORD@localhost:5432/iden2_passkeys
 5. **Setting Up the Database**
 Initialize Prisma:
 
-Run the following command to initialize Prisma:
+Run the following command to:
 
+initialize Prisma
 ```bash
 npx prisma init
-Generate Prisma Client:
 ```
-6. After defining your Prisma schema, run:
-
+Generate Prisma Client:
 ```bash
 npx prisma generate
 ```
 7- Migrate the database:
-
-Apply the Prisma migrations to set up your database tables:
-
 ``` bash
 npx prisma migrate dev --name init
 ```
-This command will create the necessary tables, such as User and PassKey.
-
 Optional: View database with Prisma Studio
-
 You can open Prisma Studio to inspect your database:
 
 ```bash
 npx prisma studio
 ``` 
+
 8- **Running the Application**
 To start the development server, run:
 
