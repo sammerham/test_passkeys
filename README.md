@@ -114,6 +114,6 @@ model PassKey {
   user             User     @relation(fields: [userId], references: [id])
 }
 
-```
+
 License
 This project is licensed under the MIT License - see the LICENSE file for details.
