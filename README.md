@@ -113,27 +113,6 @@ model PassKey {
   user             User     @relation(fields: [userId], references: [id])
 }
 
-12 - **Important Prisma Commands**
-
-Initialize Prisma:
-
-```bash
-npx prisma init
-```
-Generate Prisma Client:
-
-```bash
-npx prisma generate
-```
-Migrate the database:
-
-```bash
-npx prisma migrate dev --name init
-```
-Open Prisma Studio:
-
-```bash
-npx prisma studio
 ```
 License
 This project is licensed under the MIT License - see the LICENSE file for details.
