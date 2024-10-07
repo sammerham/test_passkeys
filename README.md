@@ -40,7 +40,8 @@ npm install
 
 4.1 **Create a .env file in the root directory and add your PostgreSQL database URL:**
 DATABASE_URL=postgresql://USERNAME:PASSWORD@localhost:5432/iden2_passkeys
-Replace USERNAME, PASSWORD, and localhost:5432 with your actual PostgreSQL credentials.
+
+**Replace USERNAME, PASSWORD, and localhost:5432 with your actual PostgreSQL credentials.**
 
 5. **Setting Up the Database**
 Initialize Prisma:
@@ -105,6 +106,7 @@ model User {
   passKeys PassKey[]
 }
 
+
 model PassKey {
   id               String   @id @default(cuid())
   credentialID     String
@@ -116,7 +118,9 @@ model PassKey {
   userId           String
   user             User     @relation(fields: [userId], references: [id])
 }
+
 12 - **Important Prisma Commands**
+
 Initialize Prisma:
 
 ```bash
