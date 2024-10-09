@@ -1,26 +1,37 @@
+// Datasource configuration to connect to your database
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql" // Change this to your database type (e.g., "mysql", "sqlite")
+  url      = env("DATABASE_URL") // Make sure to define this in your .env file
 }
 
+// Prisma Client generator
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  passKeys  PassKey[]
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  passKeys           PassKey[]           // Relation to WebAuthn credentials
+  didKeys            DIDKey[]            // Relation to DID keys
 }
 
 model PassKey {
-  id                  String  @id @default(cuid())
-  credentialID        String
-  publicKey           String
-  counter             Int
-  transports          String[]
-  deviceType          String
-  backedUp            Boolean
-  userId              String
-  user                User     @relation(fields: [userId], references: [id])
+  id                 String              @id @default(cuid())
+  credentialID       String              @unique
+  publicKey          String
+  counter            Int
+  deviceType         String
+  backedUp           Boolean
+  transports         String              // Store transports as a comma-separated string
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
+}
+
+model DIDKey {
+  id                 String              @id @default(cuid())
+  didKey             String              @unique
+  credentialId       String              // Link DID to WebAuthn credential ID
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
 }
