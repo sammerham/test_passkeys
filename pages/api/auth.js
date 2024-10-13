@@ -1,7 +1,8 @@
 // /pages/api/auth.js
 
 import { PrismaClient } from '@prisma/client';
-import { getCookie } from 'cookies-next';
+import { getCookie, setCookie } from 'cookies-next'; // Ensure setCookie is imported
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
 
     try {
       const user = await prisma.user.findUnique({
-        where: { id: parseInt(userId) }, // Ensure the ID is an integer
+        where: { id: parseInt(userId) },
         include: {
           webauthnCredentials: true,
           didKeys: true,
@@ -26,13 +27,22 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'User not found or no credentials available' });
       }
 
+      // Generate a new challenge
+      const challenge = crypto.randomBytes(32).toString('base64url');
+      console.log('Generated Challenge:', challenge);
+
+      // Store the challenge in a cookie
+      setCookie('challenge', challenge, { req, res });
+
       // Prepare the authentication options
       const options = {
-        challenge: 'base64-encoded-challenge', // Replace with your challenge generation logic
-        allowCredentials: user.webauthnCredentials.map(cred => ({
-          id: Buffer.from(cred.credentialId, 'base64').toString('utf8'), // Convert to Buffer
-          type: 'public-key',
-        })),
+        challenge: challenge,
+        allowCredentials: user.webauthnCredentials.map(cred => {
+          return {
+            id: Buffer.from(cred.credentialId, 'base64url'), // Use base64url format for the credential ID
+            type: 'public-key',
+          };
+        }),
       };
 
       res.status(200).json(options);

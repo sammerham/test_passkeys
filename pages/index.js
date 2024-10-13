@@ -16,6 +16,20 @@ export default function Home() {
 
       console.log('Authentication Options:', options); // Log the options to inspect them
 
+      // Convert Buffer to Base64 URL string for the startAuthentication function
+      options.allowCredentials = options.allowCredentials.map(cred => {
+        // Convert Buffer to standard Base64
+        const base64Id = Buffer.from(cred.id).toString('base64');
+
+        // Convert standard Base64 to Base64 URL
+        const base64UrlId = base64Id.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+        return {
+          id: base64UrlId, // Use base64 URL format
+          type: cred.type,
+        };
+      });
+
       const authResponse = await startAuthentication(options);
       const verifyRes = await axios.post('/api/verify-auth', authResponse);
 
