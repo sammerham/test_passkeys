@@ -8,18 +8,26 @@ generator client {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  publicKey  String   @unique
-  passKeys   PassKey[]
+  id                Int                 @id @default(autoincrement())
+  webauthnCredentials WebauthnCredential[]
+  didKeys           DidKey[]
 }
 
-model PassKey {
-  id                 Int      @id @default(autoincrement())
-  credentialID       String
-  publicKey          String
-  counter            Int
-  deviceType         String
-  backedUp           Boolean
-  userId             Int
-  User               User     @relation(fields: [userId], references: [id])
+model WebauthnCredential {
+  id           Int      @id @default(autoincrement())
+  userId      Int
+  credentialId String   @unique
+  publicKey    String
+  createdAt    DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model DidKey {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  didKey      String   @unique
+  credentialId String
+
+  user        User      @relation(fields: [userId], references: [id])
 }
