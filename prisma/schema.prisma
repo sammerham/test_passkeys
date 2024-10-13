@@ -8,19 +8,18 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  passKeys  PassKey[]
+  id         Int      @id @default(autoincrement())
+  publicKey  String   @unique
+  passKeys   PassKey[]
 }
 
 model PassKey {
-  id                  String  @id @default(cuid())
-  credentialID        String
-  publicKey           String
-  counter             Int
-  transports          String[]
-  deviceType          String
-  backedUp            Boolean
-  userId              String
-  user                User     @relation(fields: [userId], references: [id])
+  id                 Int      @id @default(autoincrement())
+  credentialID       String
+  publicKey          String
+  counter            Int
+  deviceType         String
+  backedUp           Boolean
+  userId             Int
+  User               User     @relation(fields: [userId], references: [id])
 }
