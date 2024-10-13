@@ -1,48 +1,24 @@
 import { generateRegistrationOptions } from '@simplewebauthn/server';
-import { PrismaClient } from '@prisma/client';  // Use Prisma for the database
+import { PrismaClient } from '@prisma/client';
 import { setCookie } from 'cookies-next';
 
 const prisma = new PrismaClient();
-const RP_ID = 'localhost';  
+const RP_ID = 'localhost';  // Replace with your actual RP ID
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email } = req.query;
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
+  const options = await generateRegistrationOptions({
+    rpID: RP_ID,
+    rpName: 'Iden2_passKey',
+    userName: 'AnonymousUser',  // Placeholder name since no email is used
+  });
 
-  // Check if the user already exists
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    return res.status(400).json({ error: 'User already exists' });
-  }
+  setCookie('regInfo', JSON.stringify({
+    challenge: options.challenge,
+  }), { req, res, httpOnly: true });
 
-// Generate WebAuthn registration options
-const options = await generateRegistrationOptions({
-  rpID: RP_ID,
-  rpName: "Iden2_passKey",
-  userName: email,
-})
-
-
-// Set a cookie with the registration challenge info
-setCookie('regInfo', JSON.stringify({
-  userId: options.user.id,
-  email,
-  challenge: options.challenge,
-}), { 
-  req, 
-  res, 
-  httpOnly: true, 
-  maxAge: 60 * 1000 // Set maxAge for 1 minute (in milliseconds)
-});
-
-
-
-  
   res.status(200).json(options);
 }

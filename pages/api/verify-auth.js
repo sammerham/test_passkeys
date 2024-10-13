@@ -16,16 +16,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No authentication information found' });
   }
 
-  const { challenge, userId } = JSON.parse(authInfo);
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { passKeys: true } });
+  const { challenge } = JSON.parse(authInfo);
 
-  const passKey = user.passKeys.find((key) => key.credentialID === req.body.id);
+  const user = await prisma.user.findFirst({
+    where: { passKeys: { some: { credentialID: req.body.id } } },
+    include: { passKeys: true },
+  });
 
-  if (!passKey) {
+  if (!user) {
     return res.status(400).json({ error: 'Passkey not found for this user' });
   }
 
-  // Convert the public key back from Base64 to a Buffer
+  const passKey = user.passKeys.find((key) => key.credentialID === req.body.id);
   const publicKeyBuffer = Buffer.from(passKey.publicKey, 'base64');
 
   const verification = await verifyAuthenticationResponse({
@@ -35,14 +37,13 @@ export default async function handler(req, res) {
     expectedRPID: RP_ID,
     authenticator: {
       credentialID: passKey.credentialID,
-      credentialPublicKey: publicKeyBuffer, // Use the decoded buffer here
+      credentialPublicKey: publicKeyBuffer,
       counter: passKey.counter,
       transports: passKey.transports,
     }
   });
 
   if (verification.verified) {
-    // Update the user's credential counter
     await prisma.passKey.update({
       where: { id: passKey.id },
       data: { counter: verification.authenticationInfo.newCounter },

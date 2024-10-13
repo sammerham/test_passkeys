@@ -3,32 +3,33 @@ import { PrismaClient } from '@prisma/client';
 import { setCookie } from 'cookies-next';
 
 const prisma = new PrismaClient();
-const RP_ID = 'localhost';  // Your RP ID, can be your domain in production
+const RP_ID = 'localhost'; // Replace with your actual RP ID
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email } = req.query;
-  const user = await prisma.user.findUnique({ where: { email }, include: { passKeys: true } });
+  // Fetch all users and passkeys (you can optimize this by implementing other criteria)
+  const users = await prisma.user.findMany({ include: { passKeys: true } });
 
-  if (!user) {
-    return res.status(400).json({ error: 'No user found' });
+  if (!users || users.length === 0) {
+    return res.status(400).json({ error: 'No users found' });
   }
 
   const options = await generateAuthenticationOptions({
     rpID: RP_ID,
-    allowCredentials: user.passKeys.map((key) => ({
-      id: key.credentialID,
-      type: 'public-key',
-      transports: key.transports,
-    })),
+    allowCredentials: users.flatMap(user => 
+      user.passKeys.map((key) => ({
+        id: key.credentialID,
+        type: 'public-key',
+        transports: key.transports,
+      }))
+    ),
   });
-    
+
   // Set a cookie with the authentication challenge
   setCookie('authInfo', JSON.stringify({
-    userId: user.id,
     challenge: options.challenge,
   }), { req, res, httpOnly: true });
 
