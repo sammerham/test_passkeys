@@ -1,37 +1,47 @@
-import { generateAuthenticationOptions } from '@simplewebauthn/server';
+// /pages/api/auth.js
+
 import { PrismaClient } from '@prisma/client';
-import { setCookie } from 'cookies-next';
+import { getCookie } from 'cookies-next';
 
 const prisma = new PrismaClient();
-const RP_ID = 'localhost'; // Replace with your actual RP ID
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'GET') {
+    const userId = getCookie('userId', { req, res });
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: No user ID found' });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: parseInt(userId) }, // Ensure the ID is an integer
+        include: {
+          webauthnCredentials: true,
+          didKeys: true,
+        },
+      });
+
+      if (!user || user.webauthnCredentials.length === 0) {
+        return res.status(404).json({ error: 'User not found or no credentials available' });
+      }
+
+      // Prepare the authentication options
+      const options = {
+        challenge: 'base64-encoded-challenge', // Replace with your challenge generation logic
+        allowCredentials: user.webauthnCredentials.map(cred => ({
+          id: Buffer.from(cred.credentialId, 'base64').toString('utf8'), // Convert to Buffer
+          type: 'public-key',
+        })),
+      };
+
+      res.status(200).json(options);
+    } catch (error) {
+      console.error('Error retrieving user:', error);
+      res.status(500).json({ error: 'Failed to retrieve user.' });
+    }
+  } else {
+    res.setHeader('Allow', ['GET']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
-  // Fetch all users and passkeys (you can optimize this by implementing other criteria)
-  const users = await prisma.user.findMany({ include: { passKeys: true } });
-
-  if (!users || users.length === 0) {
-    return res.status(400).json({ error: 'No users found' });
-  }
-
-  const options = await generateAuthenticationOptions({
-    rpID: RP_ID,
-    allowCredentials: users.flatMap(user => 
-      user.passKeys.map((key) => ({
-        id: key.credentialID,
-        type: 'public-key',
-        transports: key.transports,
-      }))
-    ),
-  });
-
-  // Set a cookie with the authentication challenge
-  setCookie('authInfo', JSON.stringify({
-    challenge: options.challenge,
-  }), { req, res, httpOnly: true });
-
-  res.status(200).json(options);
 }

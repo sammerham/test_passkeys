@@ -1,57 +1,48 @@
+// /pages/api/verify-auth.js
+
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { PrismaClient } from '@prisma/client';
-import { getCookie, deleteCookie } from 'cookies-next';
+import { getCookie } from 'cookies-next';
 
 const prisma = new PrismaClient();
-const RP_ID = 'localhost';
-const CLIENT_URL = 'http://localhost:3000';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const authInfo = getCookie('authInfo', { req, res });
-  if (!authInfo) {
-    return res.status(400).json({ error: 'No authentication information found' });
+  const userId = getCookie('userId', { req, res });
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized: No user ID found' });
   }
 
-  const { challenge } = JSON.parse(authInfo);
-
-  const user = await prisma.user.findFirst({
-    where: { passKeys: { some: { credentialID: req.body.id } } },
-    include: { passKeys: true },
-  });
-
-  if (!user) {
-    return res.status(400).json({ error: 'Passkey not found for this user' });
-  }
-
-  const passKey = user.passKeys.find((key) => key.credentialID === req.body.id);
-  const publicKeyBuffer = Buffer.from(passKey.publicKey, 'base64');
-
-  const verification = await verifyAuthenticationResponse({
-    response: req.body,
-    expectedChallenge: challenge,
-    expectedOrigin: CLIENT_URL,
-    expectedRPID: RP_ID,
-    authenticator: {
-      credentialID: passKey.credentialID,
-      credentialPublicKey: publicKeyBuffer,
-      counter: passKey.counter,
-      transports: passKey.transports,
-    }
-  });
-
-  if (verification.verified) {
-    await prisma.passKey.update({
-      where: { id: passKey.id },
-      data: { counter: verification.authenticationInfo.newCounter },
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      include: {
+        webauthnCredentials: true,
+      },
     });
 
-    deleteCookie('authInfo', { req, res });
-    return res.status(200).json({ verified: true });
-  } else {
-    return res.status(400).json({ verified: false, error: 'Verification failed' });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const verification = await verifyAuthenticationResponse({
+      response: req.body,
+      expectedChallenge: user.webauthnCredentials[0].challenge, // Ensure challenge is stored
+      expectedOrigin: 'http://localhost:3000', // Replace with your origin
+      expectedRPID: 'localhost',
+    });
+
+    if (verification.verified) {
+      res.status(200).json({ verified: true });
+    } else {
+      res.status(400).json({ verified: false, error: 'Verification failed' });
+    }
+  } catch (error) {
+    console.error('Error during authentication verification:', error);
+    res.status(500).json({ error: 'Failed to verify authentication.' });
   }
 }

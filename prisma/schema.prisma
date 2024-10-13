@@ -8,9 +8,9 @@ generator client {
 }
 
 model User {
-  id                Int                 @id @default(autoincrement())
-  webauthnCredentials WebauthnCredential[]
-  didKeys           DidKey[]
+  id                   Int                     @id @default(autoincrement())
+  webauthnCredentials  WebauthnCredential[]
+  didKeys              DidKey[]
 }
 
 model WebauthnCredential {
@@ -18,6 +18,9 @@ model WebauthnCredential {
   userId      Int
   credentialId String   @unique
   publicKey    String
+  counter      Int      // Field for storing counter
+  deviceType   String
+  backedUp     Boolean
   createdAt    DateTime @default(now())
 
   user        User      @relation(fields: [userId], references: [id])

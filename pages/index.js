@@ -1,7 +1,9 @@
+// index.js
+
 import { useState } from 'react';
 import axios from 'axios';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import crypto from 'crypto'; // Importing Node's crypto for random bytes
+import crypto from 'crypto';
 
 export default function Home() {
   const [message, setMessage] = useState('');
@@ -11,6 +13,8 @@ export default function Home() {
     try {
       const res = await axios.get(`/api/auth`);
       const options = res.data;
+
+      console.log('Authentication Options:', options); // Log the options to inspect them
 
       const authResponse = await startAuthentication(options);
       const verifyRes = await axios.post('/api/verify-auth', authResponse);
@@ -35,11 +39,10 @@ export default function Home() {
       const verifyRes = await axios.post('/api/verify-register', registrationResponse);
 
       if (verifyRes.data.verified) {
-        // Dynamically import the library for DID generation
-        const ed25519 = await import('@transmute/did-key-ed25519');
+        // Generate DID after successful registration
+        const { generate } = await import('@transmute/did-key-ed25519');
 
-        // Step 4: Generate DID only after successful registration
-        const { didDocument, keys } = await ed25519.generate(
+        const { didDocument } = await generate(
           {
             secureRandom: () => {
               return crypto.randomBytes(32); // Generate secure random bytes
@@ -50,8 +53,11 @@ export default function Home() {
 
         console.log('Generated DID Document:', didDocument);
 
-        // Step 5: Send the DID document back to the server to store the public key
-        await axios.post('/api/store-did', { didDocument });
+        // Send the DID document and credential ID to the server for storage
+        await axios.post('/api/store-did', {
+          did: didDocument.id,
+          credentialId: verifyRes.data.credentialId, // Ensure this is being passed correctly
+        });
 
         setMessage('Registration successful! DID generated and stored.');
       } else {

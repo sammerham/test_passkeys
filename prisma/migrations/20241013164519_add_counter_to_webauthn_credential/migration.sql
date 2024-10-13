@@ -11,6 +11,9 @@ CREATE TABLE "WebauthnCredential" (
     "userId" INTEGER NOT NULL,
     "credentialId" TEXT NOT NULL,
     "publicKey" TEXT NOT NULL,
+    "counter" INTEGER NOT NULL,
+    "deviceType" TEXT NOT NULL,
+    "backedUp" BOOLEAN NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "WebauthnCredential_pkey" PRIMARY KEY ("id")

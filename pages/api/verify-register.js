@@ -1,6 +1,8 @@
+// /pages/api/verify-register.js
+
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { PrismaClient } from '@prisma/client';
-import { getCookie, deleteCookie } from 'cookies-next';
+import { getCookie, deleteCookie, setCookie } from 'cookies-next';
 
 const prisma = new PrismaClient();
 const RP_ID = 'localhost';
@@ -26,26 +28,26 @@ export default async function handler(req, res) {
   });
 
   if (verification.verified) {
-    const publicKeyBase64 = Buffer.from(verification.registrationInfo.credentialPublicKey).toString('base64');
-
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
-        publicKey: publicKeyBase64,
-        passKeys: {
+        webauthnCredentials: {
           create: {
-            credentialID: verification.registrationInfo.credentialID,
-            publicKey: publicKeyBase64,
-            counter: verification.registrationInfo.counter,
+            credentialId: verification.registrationInfo.credentialID,
+            publicKey: Buffer.from(verification.registrationInfo.credentialPublicKey).toString('base64'),
+            counter: verification.registrationInfo.counter, // Store counter here
             deviceType: verification.registrationInfo.credentialDeviceType,
             backedUp: verification.registrationInfo.credentialBackedUp,
-            transport: req.body.transports,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
+    // Set the user ID in a cookie after successful registration
+    setCookie('userId', user.id.toString(), { req, res });
+
     deleteCookie('regInfo', { req, res });
-    return res.status(200).json({ verified: true });
+    // Return credentialId in the response
+    return res.status(200).json({ verified: true, credentialId: verification.registrationInfo.credentialID });
   } else {
     return res.status(400).json({ verified: false, error: 'Verification failed' });
   }
