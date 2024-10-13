@@ -1,6 +1,9 @@
+// /pages/api/register.js
+
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { PrismaClient } from '@prisma/client';
 import { setCookie } from 'cookies-next';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 const RP_ID = 'localhost';  // Replace with your actual RP ID

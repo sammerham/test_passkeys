@@ -3,6 +3,7 @@
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { PrismaClient } from '@prisma/client';
 import { getCookie, deleteCookie, setCookie } from 'cookies-next';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 const RP_ID = 'localhost';
@@ -42,12 +43,29 @@ export default async function handler(req, res) {
       },
     });
 
+    // Generate a new DID for the user after successful registration
+    const didKey = `did:key:${crypto.randomBytes(32).toString('hex')}`; // Generate your DID
+
+    // Store the DID key associated with the user
+    await prisma.didKey.create({
+      data: {
+        userId: user.id,
+        didKey: didKey,
+        credentialId: verification.registrationInfo.credentialID, // Associate DID with the credential
+      },
+    });
+
     // Set the user ID in a cookie after successful registration
     setCookie('userId', user.id.toString(), { req, res });
 
     deleteCookie('regInfo', { req, res });
-    // Return credentialId in the response
-    return res.status(200).json({ verified: true, credentialId: verification.registrationInfo.credentialID });
+
+    // Return the credentialId and DID in the response
+    return res.status(200).json({
+      verified: true,
+      credentialId: verification.registrationInfo.credentialID,
+      did: didKey, // Include the DID in the response
+    });
   } else {
     return res.status(400).json({ verified: false, error: 'Verification failed' });
   }
