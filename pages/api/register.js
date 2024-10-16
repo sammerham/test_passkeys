@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const options = await generateRegistrationOptions({
     rpID: RP_ID,
     rpName: 'Iden2_passKey',
-    userName: 'AnonymousUser',  // Placeholder name since no email is used
+    userName: 'Iden2User',
   });
 
   setCookie('regInfo', JSON.stringify({

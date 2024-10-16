@@ -44,8 +44,45 @@ export default function Home() {
     }
   };
 
+
   const handleRegister = async () => {
-    try {
+  try {
+    // Step 1: Check if any WebAuthn credentials exist for the current user
+    const credentials = await navigator.credentials.get({
+      publicKey: {
+        challenge: new Uint8Array(32), // Dummy challenge for checking credentials
+        allowCredentials: [] // This checks for any existing credentials
+      }
+    });
+
+    if (credentials) {
+      // User already has credentials, no need to register again
+      setMessage('User is already registered. Please log in.');
+      return; // Exit early
+    }
+
+    // Step 2: If no credentials are found, proceed with registration
+    const res = await axios.get(`/api/register`);
+    const options = res.data;
+
+    // Ensure options contain the proper challenge for registration
+    if (!options.challenge) {
+      throw new Error('Registration options do not contain a valid challenge.');
+    }
+
+    // Proceed with WebAuthn registration
+    const registrationResponse = await startRegistration(options);
+    const verifyRes = await axios.post('/api/verify-register', registrationResponse);
+
+    if (verifyRes.data.verified) {
+      setMessage('Registration successful!');
+    } else {
+      setMessage('Registration failed.');
+    }
+  } catch (error) {
+    if (error.name === 'NotAllowedError') {
+      setMessage('No credentials found. Proceeding to registration.');
+      // Allow registration if no credentials are found without triggering alternative auth (like QR codes)
       const res = await axios.get(`/api/register`);
       const options = res.data;
 
@@ -53,36 +90,21 @@ export default function Home() {
       const verifyRes = await axios.post('/api/verify-register', registrationResponse);
 
       if (verifyRes.data.verified) {
-        // Generate DID after successful registration
-        const { generate } = await import('@transmute/did-key-ed25519');
-
-        const { didDocument } = await generate(
-          {
-            secureRandom: () => {
-              return crypto.randomBytes(32); // Generate secure random bytes
-            },
-          },
-          { accept: 'application/did+json' }
-        );
-
-        console.log('Generated DID Document:', didDocument);
-
-        // Send the DID document and credential ID to the server for storage
-        await axios.post('/api/store-did', {
-          did: didDocument.id,
-          credentialId: verifyRes.data.credentialId, // Ensure this is being passed correctly
-        });
-
-        setMessage('Registration successful! DID generated and stored.');
+        setMessage('Registration successful!');
       } else {
         setMessage('Registration failed.');
       }
-    } catch (error) {
+    } else {
       console.error('Error during registration:', error);
       setMessage('An error occurred during registration.');
       setError('Failed to register.');
     }
+  }
   };
+
+
+
+
 
   return (
     <div>
