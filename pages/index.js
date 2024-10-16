@@ -45,23 +45,26 @@ export default function Home() {
   };
 
 
-  const handleRegister = async () => {
+const handleRegister = async () => {
   try {
-    // Step 1: Check if any WebAuthn credentials exist for the current user
+    // Step 1: Attempt to get existing credentials using only platform (local) authenticators
     const credentials = await navigator.credentials.get({
       publicKey: {
         challenge: new Uint8Array(32), // Dummy challenge for checking credentials
-        allowCredentials: [] // This checks for any existing credentials
+        allowCredentials: [],
+        authenticatorSelection: {
+          authenticatorAttachment: "platform" // Use platform authenticators like fingerprint readers
+        },
+        userVerification: "required" // Require biometric verification
       }
     });
 
     if (credentials) {
-      // User already has credentials, no need to register again
       setMessage('User is already registered. Please log in.');
-      return; // Exit early
+      return; // Exit early if credentials are found
     }
 
-    // Step 2: If no credentials are found, proceed with registration
+    // Step 2: Proceed with registration if no credentials are found
     const res = await axios.get(`/api/register`);
     const options = res.data;
 
@@ -82,7 +85,7 @@ export default function Home() {
   } catch (error) {
     if (error.name === 'NotAllowedError') {
       setMessage('No credentials found. Proceeding to registration.');
-      // Allow registration if no credentials are found without triggering alternative auth (like QR codes)
+      // Retry the registration if no credentials are found
       const res = await axios.get(`/api/register`);
       const options = res.data;
 
@@ -100,7 +103,8 @@ export default function Home() {
       setError('Failed to register.');
     }
   }
-  };
+};
+
 
 
 
