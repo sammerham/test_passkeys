@@ -64,7 +64,7 @@ const handleRegister = async () => {
         challenge: new Uint8Array(32), // Dummy challenge for checking credentials
         allowCredentials: [],
         authenticatorSelection: {
-          authenticatorAttachment: "platform" // Use platform authenticators like fingerprint readers
+          authenticatorAttachment: "platform", // Use platform authenticators like fingerprint readers
         },
         userVerification: "required" // Require biometric verification
       }
@@ -77,7 +77,7 @@ const handleRegister = async () => {
 
     // Step 2: Proceed with registration if no credentials are found
     const res = await axios.get(`/api/register`);
-    const options = res.data;
+    const options = await res.data;
 
     // Ensure options contain the proper challenge for registration
     if (!options.challenge) {
@@ -93,28 +93,41 @@ const handleRegister = async () => {
     } else {
       setMessage('Registration failed.');
     }
+
   } catch (error) {
     if (error.name === 'NotAllowedError') {
-      setMessage('No credentials found. Proceeding to registration.');
-      // Retry the registration if no credentials are found
-      const res = await axios.get(`/api/register`);
-      const options = res.data;
+      setMessage('Registration was canceled. Proceeding to fallback or retry...');
 
-      const registrationResponse = await startRegistration(options);
-      const verifyRes = await axios.post('/api/verify-register', registrationResponse);
+      // Retry or handle the case where registration is canceled
+      try {
+        const res = await axios.get(`/api/register`);
+        const options = await res.data;
 
-      if (verifyRes.data.verified) {
-        setMessage('Registration successful!');
-      } else {
-        setMessage('Registration failed.');
+        const registrationResponse = await startRegistration(options);
+        const verifyRes = await axios.post('/api/verify-register', registrationResponse);
+
+        if (verifyRes.data.verified) {
+          setMessage('Registration successful!');
+        } else {
+          setMessage('Registration failed.');
+        }
+      } catch (retryError) {
+        setMessage('Retry failed. Please try again later.');
       }
+
     } else {
       console.error('Error during registration:', error);
-      setMessage('An error occurred during registration.');
-      setError('Failed to register.');
+      setMessage('An unexpected error occurred during registration.');
     }
+  } finally {
+    // Redirect to the home page without refreshing, regardless of success or failure
+    setTimeout(() => {
+      setMessage('Redirecting to the home page...');
+      window.history.pushState({}, '', '/'); // Change URL without refresh
+    }, 2000); // Optional delay for user to read the final message before redirect
   }
 };
+
 
 
 
