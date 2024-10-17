@@ -9,40 +9,51 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    try {
-      const res = await axios.get(`/api/auth`);
-      const options = res.data;
 
-      console.log('Authentication Options:', options); // Log the options to inspect them
+const handleLogin = async () => {
+  try {
+    // Step 1: Fetch login options from the backend
+    const res = await fetch(`/api/auth`, { method: 'GET' });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    const options = await res.json();
 
-      // Convert Buffer to Base64 URL string for the startAuthentication function
-      options.allowCredentials = options.allowCredentials.map(cred => {
-        // Convert Buffer to standard Base64
-        const base64Id = Buffer.from(cred.id).toString('base64');
+    // Convert Buffer to Base64 URL string for the startAuthentication function
+    options.allowCredentials = options.allowCredentials.map(cred => {
+      const base64Id = Buffer.from(cred.id).toString('base64');
+      const base64UrlId = base64Id.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      return {
+        id: base64UrlId,  // Use base64 URL format
+        type: cred.type,
+      };
+    });
 
-        // Convert standard Base64 to Base64 URL
-        const base64UrlId = base64Id.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // Step 2: Start authentication using the WebAuthn API
+    const authResponse = await startAuthentication(options);
 
-        return {
-          id: base64UrlId, // Use base64 URL format
-          type: cred.type,
-        };
-      });
+    // Step 3: Verify the authentication response with the backend
+    const verifyRes = await axios.post('/api/verify-auth', authResponse);
 
-      const authResponse = await startAuthentication(options);
-      const verifyRes = await axios.post('/api/verify-auth', authResponse);
-
-      if (verifyRes.data.verified) {
-        setMessage('Successfully logged in.');
-      } else {
-        setMessage('Login failed.');
-      }
-    } catch (error) {
+    if (verifyRes.data.verified) {
+      setMessage('Successfully logged in.');
+    } else {
+      setMessage('Login failed.');
+    }
+  } catch (error) {
+    if (error.name === 'NotAllowedError') {
+      // Gracefully handle the case where the user is not registered or cancels the login
+      setMessage('No credentials found. You are not registered. Please register.');
+    } else {
       console.error('Error during login:', error);
       setMessage('An error occurred during login.');
     }
-  };
+  }
+};
+
+
+
+
 
 
 const handleRegister = async () => {
